@@ -12,5 +12,5 @@ file(GLOB SRC_ALL *.c)
 
 add_library(src_all ${SRC_ALL})
 
-add_executable(main main.c)
-target_link_libraries(main src_all)
+add_executable(srp main.c)
+target_link_libraries(srp src_all)

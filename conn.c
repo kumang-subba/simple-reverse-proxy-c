@@ -153,10 +153,12 @@ int conn_read(Conn *conn) {
     if (rv < 0) {
         log_err("read() error");
         conn->status = WANT_CLOSE;
+        return -1;
     }
     if (rv == 0) {
         log_err("client closed or EOF");
         conn->status = WANT_CLOSE;
+        return -1;
     }
 
     conn_buf_append(conn, buf, rv);

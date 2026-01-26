@@ -1,6 +1,5 @@
 #include "downstream.h"
 #include "buffer.h"
-#include "common.h"
 #include "conn.h"
 
 #include <netinet/in.h>
@@ -27,12 +26,12 @@ Downstream *downstream_accept(int fd) {
             ip >> 24,
             ntohs(downstream_addr.sin_port));
     Downstream *ds = malloc(sizeof(Downstream));
-    ds->readBuffer = buf_init();
-    ds->writeBuffer = buf_init();
     if (!ds) {
         close(connfd);
         return NULL;
     }
+    ds->readBuffer = buf_init();
+    ds->writeBuffer = buf_init();
     ds->conn.fd = connfd;
     ds->conn.type = CONN_DOWNSTREAM;
     ds->conn.status = WANT_READ;

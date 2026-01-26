@@ -174,7 +174,7 @@ static void conn_destroy(Conn *conn) {
         upstream_free(us);
         return;
     default:
-        log_err("conn_destroy() invalid conn to destory");
+        log_err("conn_destroy() invalid conn to destroy\n");
         return;
     }
 }
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
     int nfds;
     int epfd = epoll_create(1);
     ev.events = EPOLLIN;
-    ev.data.ptr = &listener;
+    ev.data.ptr = listener;
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, listener->fd, &ev)) {
         die("epoll_ctl: listening sock");
     }
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
             die("epoll_wait");
         }
         for (int i = 0; i < nfds; ++i) {
-            if (events[i].data.ptr == &listener) {
+            if (events[i].data.ptr == listener) {
                 Downstream *ds = downstream_accept(listener->fd);
                 if (!ds) {
                     die("accept() error");

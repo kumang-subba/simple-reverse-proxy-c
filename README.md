@@ -25,5 +25,5 @@ make
 ### Run
 
 ```bash
-./srp <listen_port> <upstream_port> <upstream_port>
+./srp -l <listen_port> -p <upstream_port> <upstream_port>
 ```

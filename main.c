@@ -28,7 +28,7 @@ static struct Config {
 } config;
 
 
-static void parseOptions(int argc, char **argv) {
+static void parse_options(int argc, char **argv) {
     int i;
     for (i = 1; i < argc; i++) {
         int lastArg = i == argc - 1;
@@ -137,32 +137,11 @@ static void handle_write(Conn *conn) {
     }
 }
 
-static void handle_read(Conn *conn) {
-    if (conn_read(conn) > 0) {
-        if (conn->type == CONN_DOWNSTREAM) {
-            Pool *pool = parr->arr[poolInd];
-            Downstream *ds = container_of(conn, Downstream, conn);
-            if (!pool) {
-                log_errfn("handle_read()", "Pool not found");
-                return;
-            }
-            if (ds_buf_append(pool->ds_buf, ds) < 0) {
-                log_err("[ ds_buf_append() ]\n[ handle_read() ] error\n");
-                return;
-            }
-            poolInd = (poolInd + 1) % parr->size;
-        }
-    };
-    // write
-    if (conn->status == WANT_WRITE) {
-        return handle_write(conn);
-    }
-};
-
 static void conn_destroy(Conn *conn) {
     switch (conn->type) {
     case CONN_DOWNSTREAM:
         Downstream *ds = container_of(conn, Downstream, conn);
+        // printf("freed: ds with conn id: %d\n", ds->conn.fd);
         downstream_free(ds);
         return;
     case CONN_UPSTREAM:
@@ -180,10 +159,35 @@ static void conn_destroy(Conn *conn) {
 }
 
 
+static void handle_read(Conn *conn) {
+    if (conn_read(conn) > 0) {
+        if (conn->type == CONN_DOWNSTREAM) {
+            Pool *pool = parr->arr[poolInd];
+            Downstream *ds = container_of(conn, Downstream, conn);
+            if (!pool) {
+                log_errfn("handle_read()", "Pool not found");
+                return;
+            }
+            if (ds_buf_append(pool->ds_buf, ds) < 0) {
+                log_err("[ ds_buf_append() ]\n[ handle_read() ] error\n");
+                return;
+            }
+            poolInd = (poolInd + 1) % parr->size;
+        }
+    } else {
+        conn_destroy(conn);
+    }
+
+    // write
+    if (conn->status == WANT_WRITE) {
+        return handle_write(conn);
+    }
+};
+
 int main(int argc, char *argv[]) {
     config.hostip = "127.0.0.1";
     config.listen_port = 0;
-    parseOptions(argc, argv);
+    parse_options(argc, argv);
 
     if (!config.listen_port) {
         die("Listen port required\nUsage: -l [listen-port]\n");
@@ -225,7 +229,8 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < parr->size; ++i) {
         Upstream *us = parr->arr[i]->us;
         if (upstream_connect(us) < 0) {
-            die("upstream_connect()\n");
+            printf("upstream_connect() failed port: %d\n", parr->arr[i]->us->port);
+            return 0;
         }
         if (us->flags & ALIVE) {
             printf("Server ");
@@ -252,7 +257,7 @@ int main(int argc, char *argv[]) {
         if (upstream_connect(us) < 0) {
             die("upstream_connect()\n");
         }
-        ev.events = EPOLLIN | EPOLLET | EPOLLERR;
+        ev.events = EPOLLIN | EPOLLERR;
         ev.data.ptr = &us->conn;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, us->conn.fd, &ev) == -1) {
             printf("epoll_ctl: upstream port: %d\n", us->port);
@@ -271,7 +276,7 @@ int main(int argc, char *argv[]) {
                     die("accept() error");
                 }
                 fd_set_nb(ds->conn.fd);
-                ev.events = EPOLLIN | EPOLLET | EPOLLERR;
+                ev.events = EPOLLIN | EPOLLERR;
                 ev.data.ptr = &ds->conn;
                 if (epoll_ctl(epfd, EPOLL_CTL_ADD, ds->conn.fd, &ev) == -1) {
                     die("epoll_ctl: downstream conn sock");
@@ -282,7 +287,7 @@ int main(int argc, char *argv[]) {
                     if (conn->status != WANT_READ)
                         continue;
                     handle_read(conn);
-                } else if (events[i].events & EPOLLET) {
+                } else if (events[i].events & EPOLLOUT) {
                     Conn *conn = (Conn *) events[i].data.ptr;
                     if (conn->status != WANT_WRITE)
                         continue;

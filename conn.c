@@ -156,7 +156,7 @@ int conn_read(Conn *conn) {
         return -1;
     }
     if (rv == 0) {
-        log_err("client closed or EOF");
+        // log_err("client closed or EOF");
         conn->status = WANT_CLOSE;
         return -1;
     }

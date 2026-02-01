@@ -61,7 +61,6 @@ static int buf_realloc(Buffer *buf, size_t n) {
     buf->buffer_end = new_buf + new_size;
     buf->data_begin = new_buf;
     buf->data_end = new_buf + data_size;
-    printf("new size %zu\n", n);
     return 1;
 }
 

@@ -128,18 +128,20 @@ int conn_write(Conn *conn, int target_fd) {
 
     ssize_t wv = write(target_fd, writeBuf->data_begin, reqLen);
     if (wv < 0 && errno == EAGAIN) {
-        return -1;
+        if (errno == EAGAIN) {
+            return -1;
+        } else {
+            log_err("write() error");
+            conn->status = WANT_CLOSE;
+            return 0;
+        }
     }
-    if (wv < 0) {
-        log_err("write() error");
-        conn->status = WANT_CLOSE;
-        return 0;
-    }
+
     buf_consume(writeBuf, reqLen);
-    if (writeBuf->data_end == writeBuf->data_begin) {
-        conn->status = WANT_READ;
+    if (writeBuf->data_end != writeBuf->data_begin) {
         return -1;
     }
+    conn->status = WANT_READ;
     return 1;
 }
 

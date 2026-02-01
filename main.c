@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
     struct epoll_event ev, events[10];
     int nfds;
     int epfd = epoll_create(1);
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
     ev.data.ptr = listener;
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, listener->fd, &ev)) {
         die("epoll_ctl: listening sock");
@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
         if (upstream_connect(us) < 0) {
             die("upstream_connect()\n");
         }
-        ev.events = EPOLLIN | EPOLLERR;
+        ev.events = EPOLLIN | EPOLLOUT;
         ev.data.ptr = &us->conn;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, us->conn.fd, &ev) == -1) {
             printf("epoll_ctl: upstream port: %d\n", us->port);
